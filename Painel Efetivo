@@ -190,40 +190,19 @@ function enviarMensagem() {
       const partes = link.split('/');
       const channelId = partes[partes.length - 1];
       const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
-      const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
-
+      const { Client, GatewayIntentBits } = require('discord.js');
       const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 
       client.once('ready', async () => {
         try {
           const canal = await client.channels.fetch(channelId);
           if (!canal) throw new Error('Canal não encontrado.');
-
-          // Criar embed básico
-          const embed = new EmbedBuilder()
-            .setDescription(texto)
-            .setColor('#0099ff')
-            .setTimestamp()
-            .setFooter({ text: 'Mensagem enviada pelo painel' });
-
-          // Exemplo de botão (opcional)
-          const botao = new ButtonBuilder()
-            .setCustomId('botao_exemplo')
-            .setLabel('Clique Aqui')
-            .setStyle(ButtonStyle.Primary);
-
-          const row = new ActionRowBuilder().addComponents(botao);
-
-          // Envia mensagem com embed e botão
-          await canal.send({ embeds: [embed], components: [row] });
-
-          console.log('🎟️ Mensagem enviada com sucesso!');
+          await canal.send(texto);
+          console.log('✅ Mensagem enviada com sucesso!');
         } catch (e) {
           console.log('❌ Erro ao enviar mensagem:', e.message);
         }
-
-        // NÃO destrua o client aqui se quiser reutilizar (mas seu fluxo atual cria e destrói a cada comando)
-        await client.destroy();
+        client.destroy();
         setTimeout(showMenu, 1500);
       });
 
@@ -341,17 +320,22 @@ function setupTicketTool() {
                   console.log('🎟️ Painel de ticket enviado com sucesso!');
                 } catch (e) {
                   console.log('❌ Erro ao enviar painel:', e.message);
+                } finally {
+                  client.destroy();
+                  setTimeout(showMenu, 2000);
                 }
+              });
 
-                client.on(Events.InteractionCreate, async (interaction) => {
-                  if (!interaction.isButton()) return;
+              client.on(Events.InteractionCreate, async (interaction) => {
+                if (!interaction.isButton()) return;
 
-                  const guild = interaction.guild;
-                  const member = interaction.member;
+                const guild = interaction.guild;
+                const member = interaction.member;
 
-                  if (interaction.customId === `ticket_create_${ticketName}`) {
-                    const nomeCanal = `ticket-${member.user.username.toLowerCase()}`;
+                if (interaction.customId === `ticket_create_${ticketName}`) {
+                  const nomeCanal = `ticket-${member.user.username.toLowerCase()}`;
 
+                  try {
                     const canalTicket = await guild.channels.create({
                       name: nomeCanal,
                       type: ChannelType.GuildText,
@@ -362,11 +346,17 @@ function setupTicketTool() {
                         },
                         {
                           id: member.user.id,
-                          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages],
+                          allow: [
+                            PermissionsBitField.Flags.ViewChannel,
+                            PermissionsBitField.Flags.SendMessages,
+                          ],
                         },
                         ...allowedRoleIds.map(roleId => ({
                           id: roleId,
-                          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages],
+                          allow: [
+                            PermissionsBitField.Flags.ViewChannel,
+                            PermissionsBitField.Flags.SendMessages,
+                          ],
                         })),
                       ],
                     });
@@ -395,21 +385,27 @@ function setupTicketTool() {
                       content: `✅ Ticket criado: ${canalTicket}`,
                       ephemeral: true,
                     });
+                  } catch (err) {
+                    await interaction.reply({
+                      content: '❌ Erro ao criar o ticket.',
+                      ephemeral: true,
+                    });
+                    console.error(err);
                   }
+                }
 
-                  if (interaction.customId === 'ticket_close') {
-                    const canal = interaction.channel;
-                    if (canal.name.startsWith('ticket-')) {
-                      await interaction.reply({ content: '🔒 Fechando o ticket...', ephemeral: true });
-                      setTimeout(() => canal.delete().catch(() => {}), 2000);
-                    } else {
-                      await interaction.reply({ content: '❌ Este canal não parece ser um ticket.', ephemeral: true });
-                    }
+                if (interaction.customId === 'ticket_close') {
+                  const canal = interaction.channel;
+                  if (canal.name.startsWith('ticket-')) {
+                    await interaction.reply({ content: '🔒 Fechando o ticket...', ephemeral: true });
+                    setTimeout(() => canal.delete().catch(() => {}), 2000);
+                  } else {
+                    await interaction.reply({ content: '❌ Este canal não parece ser um ticket.', ephemeral: true });
                   }
-                });
-
-                client.login(config.token);
+                }
               });
+
+              client.login(config.token);
             });
           });
         });
@@ -417,6 +413,7 @@ function setupTicketTool() {
     });
   });
 }
+
 
 // Inicializa com verificação de chave whitelist
 verificarChave(showMenu);
