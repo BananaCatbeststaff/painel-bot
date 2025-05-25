@@ -257,6 +257,7 @@ function enviarEmbed() {
     });
   });
 }
+
 function setupTicketTool() {
   rl.question('[Canal] ➤ Cole o link do canal para o painel de tickets: ', (link) => {
     rl.question('[Título] ➤ Título do painel: ', (titulo) => {
@@ -374,5 +375,6 @@ function setupTicketTool() {
     });
   });
 }
+
 // Inicializa com verificação de chave whitelist
 verificarChave(showMenu);
