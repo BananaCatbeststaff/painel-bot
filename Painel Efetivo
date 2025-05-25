@@ -190,19 +190,40 @@ function enviarMensagem() {
       const partes = link.split('/');
       const channelId = partes[partes.length - 1];
       const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
-      const { Client, GatewayIntentBits } = require('discord.js');
+      const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+
       const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 
       client.once('ready', async () => {
         try {
           const canal = await client.channels.fetch(channelId);
           if (!canal) throw new Error('Canal não encontrado.');
-          await canal.send(texto);
-          console.log('✅ Mensagem enviada com sucesso!');
+
+          // Criar embed básico
+          const embed = new EmbedBuilder()
+            .setDescription(texto)
+            .setColor('#0099ff')
+            .setTimestamp()
+            .setFooter({ text: 'Mensagem enviada pelo painel' });
+
+          // Exemplo de botão (opcional)
+          const botao = new ButtonBuilder()
+            .setCustomId('botao_exemplo')
+            .setLabel('Clique Aqui')
+            .setStyle(ButtonStyle.Primary);
+
+          const row = new ActionRowBuilder().addComponents(botao);
+
+          // Envia mensagem com embed e botão
+          await canal.send({ embeds: [embed], components: [row] });
+
+          console.log('🎟️ Mensagem enviada com sucesso!');
         } catch (e) {
           console.log('❌ Erro ao enviar mensagem:', e.message);
         }
-        client.destroy();
+
+        // NÃO destrua o client aqui se quiser reutilizar (mas seu fluxo atual cria e destrói a cada comando)
+        await client.destroy();
         setTimeout(showMenu, 1500);
       });
 
