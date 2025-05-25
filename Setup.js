@@ -1,70 +1,68 @@
-const { execSync } = require('child_process');
-const fs = require('fs');
-const https = require('https');
-const path = require('path');
+const fs = require("fs");
+const { execSync } = require("child_process");
+const path = require("path");
 
-const PAINEL_URL = 'https://raw.githubusercontent.com/BananaCatbeststaff/painel-bot/refs/heads/main/Painel%20Efetivo';
-const PAINEL_FILE = path.join(__dirname, 'painel.js');
-const DEPENDENCIES = ['readline-sync']; // Adicione mais dependências se necessário
+const CONFIG_PATH = path.join(__dirname, "config.json");
+const PAINEL_PATH = path.join(__dirname, "painel.js");
+const REQUIRED_MODULES = ["readline-sync", "axios", "chalk", "inquirer"];
 
-// Função para baixar o painel.js
-function baixarPainel(url, destino, callback) {
-  console.log('⬇️  Baixando painel.js...');
-  const file = fs.createWriteStream(destino);
-  https.get(url, res => {
-    if (res.statusCode !== 200) {
-      console.error(`❌ Falha ao baixar painel.js (status: ${res.statusCode})`);
-      return;
-    }
-    res.pipe(file);
-    file.on('finish', () => {
-      file.close(callback);
-      console.log('✅ painel.js baixado com sucesso.');
+// Passo 1: Instalar dependências se faltando
+function installDependencies() {
+    console.log("[📦] Verificando dependências...");
+
+    let missingModules = REQUIRED_MODULES.filter((mod) => {
+        try {
+            require.resolve(mod);
+            return false;
+        } catch {
+            return true;
+        }
     });
-  }).on('error', err => {
-    fs.unlink(destino, () => {});
-    console.error('❌ Erro ao baixar painel.js:', err.message);
-  });
-}
 
-// Instala dependências faltantes
-function instalarDependencias(deps) {
-  const faltando = [];
-
-  for (const dep of deps) {
-    try {
-      require.resolve(dep);
-    } catch {
-      faltando.push(dep);
+    if (missingModules.length > 0) {
+        console.log(`[⬇️] Instalando módulos: ${missingModules.join(", ")}`);
+        try {
+            execSync(`npm install ${missingModules.join(" ")}`, { stdio: "inherit" });
+        } catch (err) {
+            console.error("[❌] Falha ao instalar pacotes.");
+            process.exit(1);
+        }
+    } else {
+        console.log("[✅] Todos os módulos já estão instalados.");
     }
-  }
+}
 
-  if (faltando.length > 0) {
-    console.log(`🔧 Instalando dependências: ${faltando.join(', ')}`);
-    try {
-      execSync(`npm install ${faltando.join(' ')}`, { stdio: 'inherit' });
-      console.log('✅ Dependências instaladas com sucesso.');
-    } catch (err) {
-      console.error('❌ Erro ao instalar dependências:', err);
-      process.exit(1);
+// Passo 2: Criar config.json se não existir
+function ensureConfigFile() {
+    if (!fs.existsSync(CONFIG_PATH)) {
+        const defaultConfig = {
+            status: "online",
+            token: "COLE_SEU_TOKEN",
+            prefix: "!",
+            owner: "SeuNome#0000"
+        };
+        fs.writeFileSync(CONFIG_PATH, JSON.stringify(defaultConfig, null, 4));
+        console.log("[🛠️] config.json criado com configurações padrão.");
+    } else {
+        console.log("[✅] config.json já existe.");
     }
-  } else {
-    console.log('✅ Todas as dependências já estão instaladas.');
-  }
 }
 
-// Executa o painel.js
-function iniciarPainel() {
-  try {
-    console.log('\n🚀 Iniciando painel...');
-    require('./painel.js');
-  } catch (err) {
-    console.error('❌ Erro ao executar painel.js:', err);
-  }
+// Passo 3: Executar painel.js
+function startPainel() {
+    if (!fs.existsSync(PAINEL_PATH)) {
+        console.error("[❌] painel.js não encontrado. Certifique-se de que ele esteja no mesmo diretório.");
+        process.exit(1);
+    }
+    console.log("[🚀] Iniciando painel.js...");
+    execSync("node painel.js", { stdio: "inherit" });
 }
 
-// Execução principal
-baixarPainel(PAINEL_URL, PAINEL_FILE, () => {
-  instalarDependencias(DEPENDENCIES);
-  iniciarPainel();
-});
+// Execução em ordem
+(function main() {
+    console.clear();
+    console.log("==== Painel Setup Automático ====\n");
+    installDependencies();
+    ensureConfigFile();
+    startPainel();
+})();
