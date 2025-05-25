@@ -9,9 +9,9 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-// Painel visual
-console.clear();
-console.log(`
+function showMenu() {
+  console.clear();
+  console.log(`
 / __| '_ \\ / _ \\| | | | |/ / _ \\ / _\` |/ _ \\ \\ / /
 \\__ \\ | | | (_) | |_| |   < (_) | (_| |  __/\\ V /
 |___/_| |_|\\___/ \\__,_|_|\\_\\___(_)__,_|\\___| \\_/
@@ -35,18 +35,21 @@ console.log(`
 ╰──────────────────────────────────────────────────────────────╯
 `);
 
-rl.question('[SetupBot] ➤ Digite o número da opção desejada: ', (answer) => {
-  switch (answer.trim()) {
-    case '1': criarArquivos(true); break;
-    case '2': criarArquivos(false); break;
-    case '3': console.log('❌ Saindo...'); rl.close(); break;
-    case '4': alterarToken(); break;
-    case '5': ligarBot(); break;
-    case '6': desligarBot(); break;
-    case '7': enviarMensagem(); break;
-    default: console.log('⚠️ Opção inválida. Tente novamente.'); rl.close();
-  }
-});
+  rl.question('[SetupBot] ➤ Digite o número da opção desejada: ', (answer) => {
+    switch (answer.trim()) {
+      case '1': criarArquivos(true); break;
+      case '2': criarArquivos(false); break;
+      case '3': console.log('❌ Saindo...'); rl.close(); break;
+      case '4': alterarToken(); break;
+      case '5': ligarBot(); break;
+      case '6': desligarBot(); break;
+      case '7': enviarMensagem(); break;
+      default:
+        console.log('⚠️ Opção inválida. Tente novamente.');
+        setTimeout(showMenu, 1500);
+    }
+  });
+}
 
 function criarArquivos(tudo) {
   const estrutura = {
@@ -102,14 +105,14 @@ client.login(config.token);`;
   console.log('\n🎉 Setup finalizado! Execute:');
   console.log('   1️⃣ npm install');
   console.log('   2️⃣ node painel.js e escolha [5] para iniciar o bot');
-  rl.close();
+  setTimeout(showMenu, 3000);
 }
 
 function alterarToken() {
   const configPath = path.join(process.cwd(), 'config.json');
   if (!fs.existsSync(configPath)) {
     console.log('⚠️ config.json não encontrado!');
-    rl.close(); return;
+    return setTimeout(showMenu, 1500);
   }
   rl.question('[TokenBot] ➤ Digite o novo token: ', (novoToken) => {
     try {
@@ -120,18 +123,18 @@ function alterarToken() {
     } catch (err) {
       console.log('❌ Erro ao alterar token:', err.message);
     }
-    rl.close();
+    setTimeout(showMenu, 1500);
   });
 }
 
 function ligarBot() {
   if (botProcess) {
     console.log('⚠️ Bot já está em execução.');
-    rl.close(); return;
+    return setTimeout(showMenu, 1500);
   }
   botProcess = spawn('node', ['index.js'], { stdio: 'inherit' });
   console.log('✅ Bot iniciado.');
-  rl.close();
+  setTimeout(showMenu, 1500);
 }
 
 function desligarBot() {
@@ -142,7 +145,7 @@ function desligarBot() {
   } else {
     console.log('⚠️ Bot não está em execução.');
   }
-  rl.close();
+  setTimeout(showMenu, 1500);
 }
 
 function enviarMensagem() {
@@ -164,10 +167,13 @@ function enviarMensagem() {
           console.log('❌ Erro ao enviar mensagem:', e.message);
         }
         client.destroy();
-        rl.close();
+        setTimeout(showMenu, 1500);
       });
 
       client.login(config.token);
     });
   });
 }
+
+// Inicializa mostrando o menu
+showMenu();
