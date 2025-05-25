@@ -1,0 +1,173 @@
+const readline = require('readline');
+const fs = require('fs');
+const path = require('path');
+const { spawn } = require('child_process');
+let botProcess = null;
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+// Painel visual
+console.clear();
+console.log(`
+/ __| '_ \\ / _ \\| | | | |/ / _ \\ / _\` |/ _ \\ \\ / /
+\\__ \\ | | | (_) | |_| |   < (_) | (_| |  __/\\ V /
+|___/_| |_|\\___/ \\__,_|_|\\_\\___(_)__,_|\\___| \\_/
+
+- Version: 1.2.0 | Discord Multi-Bot Panel
+- Credit: YourName.dev
+- Status: Multi-funcional
+
+╭──────────── discord.gg/seuservidor - Setup Menu ─────────────╮
+│ ╭────────┬──────────────────────────────────────────────────╮ │
+│ │   No   │ Setup Option                                     │ │
+│ ├────────┼──────────────────────────────────────────────────┤ │
+│ │ [ 1 ]  │ Criar todos os arquivos do bot                   │ │
+│ │ [ 2 ]  │ Apenas criar config.json                         │ │
+│ │ [ 3 ]  │ Sair do painel                                   │ │
+│ │ [ 4 ]  │ Alterar token do bot                             │ │
+│ │ [ 5 ]  │ Ligar o bot (start)                              │ │
+│ │ [ 6 ]  │ Desligar o bot (stop)                            │ │
+│ │ [ 7 ]  │ Enviar mensagem para canal específico            │ │
+│ ╰────────┴──────────────────────────────────────────────────╯ │
+╰──────────────────────────────────────────────────────────────╯
+`);
+
+rl.question('[SetupBot] ➤ Digite o número da opção desejada: ', (answer) => {
+  switch (answer.trim()) {
+    case '1': criarArquivos(true); break;
+    case '2': criarArquivos(false); break;
+    case '3': console.log('❌ Saindo...'); rl.close(); break;
+    case '4': alterarToken(); break;
+    case '5': ligarBot(); break;
+    case '6': desligarBot(); break;
+    case '7': enviarMensagem(); break;
+    default: console.log('⚠️ Opção inválida. Tente novamente.'); rl.close();
+  }
+});
+
+function criarArquivos(tudo) {
+  const estrutura = {
+    'config.json': `{
+  "token": "SEU_TOKEN_DO_BOT",
+  "prefix": "!"
+}`
+  };
+
+  if (tudo) {
+    estrutura['index.js'] = `const { Client, GatewayIntentBits } = require('discord.js');
+const config = require('./config.json');
+const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
+
+client.once('ready', () => console.log(\`🤖 Bot online como \${client.user.tag}\`));
+client.on('messageCreate', msg => {
+  if (msg.content === config.prefix + "ping") msg.reply("🏓 Pong!");
+});
+client.login(config.token);`;
+
+    estrutura['commands/ping.js'] = `module.exports = {
+  name: 'ping',
+  description: 'Responde com Pong!',
+  execute(message) {
+    message.reply('🏓 Pong!');
+  },
+};`;
+  }
+
+  for (const [caminho, conteudo] of Object.entries(estrutura)) {
+    const completo = path.join(process.cwd(), caminho);
+    const dir = path.dirname(completo);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(completo, conteudo.trim());
+    console.log(`✅ Arquivo criado: ${caminho}`);
+  }
+
+  if (tudo) {
+    const pkgPath = path.join(process.cwd(), 'package.json');
+    if (!fs.existsSync(pkgPath)) {
+      const pkg = {
+        name: 'discord-multi-bot',
+        version: '1.0.0',
+        main: 'index.js',
+        scripts: { start: 'node index.js' },
+        dependencies: { "discord.js": "^14.0.0" }
+      };
+      fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
+      console.log('📦 package.json criado!');
+    }
+  }
+
+  console.log('\n🎉 Setup finalizado! Execute:');
+  console.log('   1️⃣ npm install');
+  console.log('   2️⃣ node painel.js e escolha [5] para iniciar o bot');
+  rl.close();
+}
+
+function alterarToken() {
+  const configPath = path.join(process.cwd(), 'config.json');
+  if (!fs.existsSync(configPath)) {
+    console.log('⚠️ config.json não encontrado!');
+    rl.close(); return;
+  }
+  rl.question('[TokenBot] ➤ Digite o novo token: ', (novoToken) => {
+    try {
+      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+      config.token = novoToken;
+      fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+      console.log('✅ Token atualizado!');
+    } catch (err) {
+      console.log('❌ Erro ao alterar token:', err.message);
+    }
+    rl.close();
+  });
+}
+
+function ligarBot() {
+  if (botProcess) {
+    console.log('⚠️ Bot já está em execução.');
+    rl.close(); return;
+  }
+  botProcess = spawn('node', ['index.js'], { stdio: 'inherit' });
+  console.log('✅ Bot iniciado.');
+  rl.close();
+}
+
+function desligarBot() {
+  if (botProcess) {
+    botProcess.kill();
+    botProcess = null;
+    console.log('🛑 Bot desligado.');
+  } else {
+    console.log('⚠️ Bot não está em execução.');
+  }
+  rl.close();
+}
+
+function enviarMensagem() {
+  rl.question('[Canal] ➤ Cole o link do canal (ex: https://discord.com/channels/123/456): ', (link) => {
+    rl.question('[Mensagem] ➤ Digite a mensagem: ', (texto) => {
+      const partes = link.split('/');
+      const channelId = partes[partes.length - 1];
+      const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
+      const { Client, GatewayIntentBits } = require('discord.js');
+      const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
+
+      client.once('ready', async () => {
+        try {
+          const canal = await client.channels.fetch(channelId);
+          if (!canal) throw new Error('Canal não encontrado.');
+          await canal.send(texto);
+          console.log('✅ Mensagem enviada com sucesso!');
+        } catch (e) {
+          console.log('❌ Erro ao enviar mensagem:', e.message);
+        }
+        client.destroy();
+        rl.close();
+      });
+
+      client.login(config.token);
+    });
+  });
+}
