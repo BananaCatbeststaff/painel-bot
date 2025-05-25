@@ -1,257 +1,220 @@
-const readline = require('readline');
 const fs = require('fs');
-const path = require('path');
-const { spawn } = require('child_process');
+const readline = require('readline-sync');
+const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
 
-let botProcess = null;
+const CONFIG_FILE = './config.json';
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
+let client = null;
+let config = { token: '', status: 'stopped' };
 
-// Cores ANSI para terminal
-const colors = {
-  reset: '\x1b[0m',
-  bright: '\x1b[1m',
-
-  fgRed: '\x1b[31m',
-  fgGreen: '\x1b[32m',
-  fgYellow: '\x1b[33m',
-  fgBlue: '\x1b[34m',
-  fgMagenta: '\x1b[35m',
-  fgCyan: '\x1b[36m',
-  fgWhite: '\x1b[37m',
-};
-
-// Mensagem de boas-vindas e delay para mostrar o menu
-function welcomeMessage() {
-  console.clear();
-  console.log(colors.fgCyan + colors.bright);
-  console.log('═══════════════════════════════════════════════════════════');
-  console.log('   🔥 Bem-vindo ao Discord Multi-Bot Panel v1.2.0 🔥      ');
-  console.log('═══════════════════════════════════════════════════════════' + colors.reset);
-  console.log('Use este painel para criar, configurar e controlar seu bot.\n');
-  setTimeout(showMenu, 2000);
+// Salvar config
+function saveConfig(configData) {
+  fs.writeFileSync(CONFIG_FILE, JSON.stringify(configData, null, 2));
 }
 
-// Menu principal com opções
-function showMenu() {
-  console.clear();
-  console.log(colors.fgMagenta + colors.bright + `
-/ __| '_ \\ / _ \\| | | | |/ / _ \\ / _\` |/ _ \\ \\ / /
-\\__ \\ | | | (_) | |_| |   < (_) | (_| |  __/\\ V /
-|___/_| |_|\\___/ \\__,_|_|\\_\\___(_)__,_|\\___| \\_/
-
-` + colors.reset);
-
-  console.log(
-    colors.fgYellow + colors.bright +
-    '- Version: 1.2.0 | Discord Multi-Bot Panel\n' +
-    '- Credit: YourName.dev\n' +
-    '- Status: Multi-funcional\n\n' +
-    colors.reset
-  );
-
-  console.log(colors.fgCyan +
-    '╭──────────── ' + colors.fgGreen + 'discord.gg/seuservidor' + colors.fgCyan + ' - Setup Menu ─────────────╮' + colors.reset
-  );
-  console.log(colors.fgCyan +
-    '│ ╭────────┬──────────────────────────────────────────────────╮ │' + colors.reset
-  );
-  console.log(colors.fgBlue +
-    '│ │   No   │ Setup Option                                     │ │' + colors.reset
-  );
-  console.log(colors.fgBlue +
-    '│ ├────────┼──────────────────────────────────────────────────┤ │' + colors.reset
-  );
-  [
-    '[ 1 ]  Criar todos os arquivos do bot',
-    '[ 2 ]  Apenas criar config.json',
-    '[ 3 ]  Sair do painel',
-    '[ 4 ]  Alterar token do bot',
-    '[ 5 ]  Ligar o bot (start)',
-    '[ 6 ]  Desligar o bot (stop)',
-    '[ 7 ]  Enviar mensagem para canal específico',
-    '[ 8 ]  Enviar mensagem com embed personalizado',
-  ].forEach((text, i) => {
-    console.log(colors.fgWhite + `│ │ ${text.padEnd(48)} │ │` + colors.reset);
-  });
-  console.log(colors.fgCyan +
-    '│ ╰────────┴──────────────────────────────────────────────────╯ │' + colors.reset
-  );
-  console.log(colors.fgCyan +
-    '╰──────────────────────────────────────────────────────────────╯\n' + colors.reset
-  );
-
-  rl.question(colors.fgGreen + '[SetupBot] ➤ Digite o número da opção desejada: ' + colors.reset, handleInput);
+// Carregar config
+function loadConfig() {
+  if (!fs.existsSync(CONFIG_FILE)) {
+    const defaultConfig = { token: '', status: 'stopped' };
+    saveConfig(defaultConfig);
+    return defaultConfig;
+  }
+  const data = fs.readFileSync(CONFIG_FILE);
+  return JSON.parse(data);
 }
 
-// Handler central das opções do menu
-function handleInput(answer) {
-  switch (answer.trim()) {
-    case '1': criarArquivos(true); break;
-    case '2': criarArquivos(false); break;
-    case '3':
-      console.log(colors.fgRed + '❌ Saindo...' + colors.reset);
-      rl.close();
-      break;
-    case '4': alterarToken(); break;
-    case '5': ligarBot(); break;
-    case '6': desligarBot(); break;
-    case '7': enviarMensagem(); break;
-    case '8': enviarMensagemEmbed(); break;
-    default:
-      console.log(colors.fgRed + '⚠️ Opção inválida. Tente novamente.' + colors.reset);
-      setTimeout(showMenu, 1500);
-  }
-}
-
-// Cria arquivos básicos do bot
-function criarArquivos(tudo) {
-  const estrutura = {
-    'config.json': `{
-  "token": "SEU_TOKEN_DO_BOT",
-  "prefix": "!"
-}`
-  };
-
-  if (tudo) {
-    estrutura['index.js'] = `const { Client, GatewayIntentBits } = require('discord.js');
-const config = require('./config.json');
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
-
-client.once('ready', () => console.log(\`🤖 Bot online como \${client.user.tag}\`));
-client.on('messageCreate', msg => {
-  if (msg.content === config.prefix + "ping") msg.reply("🏓 Pong!");
-});
-client.login(config.token);`;
-
-    estrutura['commands/ping.js'] = `module.exports = {
-  name: 'ping',
-  description: 'Responde com Pong!',
-  execute(message) {
-    message.reply('🏓 Pong!');
-  },
-};`;
-  }
-
-  for (const [caminho, conteudo] of Object.entries(estrutura)) {
-    const completo = path.join(process.cwd(), caminho);
-    const dir = path.dirname(completo);
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    fs.writeFileSync(completo, conteudo.trim());
-    console.log(colors.fgGreen + `✅ Arquivo criado: ${caminho}` + colors.reset);
-  }
-
-  if (tudo) {
-    const pkgPath = path.join(process.cwd(), 'package.json');
-    if (!fs.existsSync(pkgPath)) {
-      const pkg = {
-        name: 'discord-multi-bot',
-        version: '1.0.0',
-        main: 'index.js',
-        scripts: { start: 'node index.js' },
-        dependencies: { "discord.js": "^14.0.0" }
-      };
-      fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
-      console.log(colors.fgGreen + '📦 package.json criado!' + colors.reset);
-    }
-  }
-
-  console.log(colors.fgYellow + '\n🎉 Setup finalizado! Execute:' + colors.reset);
-  console.log('   1️⃣ npm install');
-  console.log('   2️⃣ node painel.js e escolha [5] para iniciar o bot');
-  setTimeout(showMenu, 2500);
-}
-
-// Função para alterar o token do bot no config.json
+// Alterar token do bot
 function alterarToken() {
-  const configPath = path.join(process.cwd(), 'config.json');
-  if (!fs.existsSync(configPath)) {
-    console.log(colors.fgRed + '⚠️ config.json não encontrado!' + colors.reset);
-    setTimeout(showMenu, 1500);
+  const novoToken = readline.question('Digite o novo token do bot: ');
+  config.token = novoToken.trim();
+  saveConfig(config);
+  console.log('✅ Token atualizado com sucesso!');
+}
+
+// Ligar bot (conectar)
+async function ligarBot() {
+  config = loadConfig();
+
+  if (!config.token || config.token.length < 10) {
+    console.log('⚠️ Token não configurado ou inválido. Use a opção 4 para alterar o token.');
     return;
   }
-  rl.question(colors.fgCyan + '[TokenBot] ➤ Digite o novo token: ' + colors.reset, (novoToken) => {
-    try {
-      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      config.token = novoToken;
-      fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-      console.log(colors.fgGreen + '✅ Token atualizado!' + colors.reset);
-    } catch (err) {
-      console.log(colors.fgRed + '❌ Erro ao alterar token:', err.message + colors.reset);
+
+  if (client && client.isReady()) {
+    console.log('Bot já está ligado! Reiniciando conexão...');
+    await client.destroy();
+    client = null;
+  }
+
+  client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
+
+  client.once('ready', () => {
+    console.log(`✅ Bot conectado como ${client.user.tag}`);
+    config.status = 'started';
+    saveConfig(config);
+  });
+
+  client.on('error', (err) => {
+    console.error('Erro do client:', err);
+  });
+
+  try {
+    await client.login(config.token);
+  } catch (err) {
+    console.error('❌ Falha ao logar:', err.message);
+  }
+}
+
+// Desligar bot (desconectar)
+async function desligarBot() {
+  if (!client || !client.isReady()) {
+    console.log('Bot não está ligado.');
+    return;
+  }
+
+  await client.destroy();
+  client = null;
+  config.status = 'stopped';
+  saveConfig(config);
+  console.log('✅ Bot desligado com sucesso!');
+}
+
+// Enviar mensagem simples para canal
+async function enviarMensagem() {
+  if (!client || !client.isReady()) {
+    console.log('⚠️ Bot não está ligado! Ligue o bot antes de enviar mensagens.');
+    return;
+  }
+  const canalId = readline.question('Digite o ID do canal para enviar a mensagem: ').trim();
+  const mensagem = readline.question('Digite a mensagem a ser enviada: ').trim();
+
+  try {
+    const canal = await client.channels.fetch(canalId);
+    if (!canal || !canal.isTextBased()) {
+      console.log('⚠️ Canal inválido ou não é um canal de texto.');
+      return;
     }
-    setTimeout(showMenu, 1500);
-  });
+    await canal.send(mensagem);
+    console.log('✅ Mensagem enviada com sucesso!');
+  } catch (error) {
+    console.error('❌ Erro ao enviar mensagem:', error.message);
+  }
 }
 
-// Função para iniciar o bot com spawn e capturar saída
-function ligarBot() {
-  if (botProcess) {
-    console.log(colors.fgYellow + '⚠️ Bot já está rodando!' + colors.reset);
-    setTimeout(showMenu, 1500);
+// Enviar embed personalizado para canal
+async function enviarEmbed() {
+  if (!client || !client.isReady()) {
+    console.log('⚠️ Bot não está ligado! Ligue o bot antes de enviar mensagens.');
     return;
   }
-  const indexPath = path.join(process.cwd(), 'index.js');
-  if (!fs.existsSync(indexPath)) {
-    console.log(colors.fgRed + '❌ index.js não encontrado. Crie os arquivos primeiro.' + colors.reset);
-    setTimeout(showMenu, 1500);
-    return;
+  const canalId = readline.question('Digite o ID do canal para enviar o embed: ').trim();
+
+  console.log('Escolha uma cor para o embed:');
+  console.log('[1] Azul (#3498db)');
+  console.log('[2] Roxo (#9b59b6)');
+  console.log('[3] Vermelho (#e74c3c)');
+  console.log('[4] Preto (#000000)');
+  const corOpcao = readline.question('Digite o número da cor desejada: ').trim();
+
+  let corHex = '#3498db'; // padrão azul
+  switch (corOpcao) {
+    case '1': corHex = '#3498db'; break; // azul
+    case '2': corHex = '#9b59b6'; break; // roxo
+    case '3': corHex = '#e74c3c'; break; // vermelho
+    case '4': corHex = '#000000'; break; // preto
+    default: console.log('Cor inválida, usando azul padrão.'); break;
   }
 
-  console.log(colors.fgGreen + '▶️ Ligando o bot...' + colors.reset);
-  botProcess = spawn('node', ['index.js'], { stdio: 'inherit' });
+  const textoEmbed = readline.question('Digite o texto do embed: ').trim();
 
-  botProcess.on('close', (code) => {
-    console.log(colors.fgYellow + `⚠️ Bot finalizado com código ${code}` + colors.reset);
-    botProcess = null;
-    setTimeout(showMenu, 1500);
-  });
+  try {
+    const canal = await client.channels.fetch(canalId);
+    if (!canal || !canal.isTextBased()) {
+      console.log('⚠️ Canal inválido ou não é um canal de texto.');
+      return;
+    }
 
-  botProcess.on('error', (err) => {
-    console.log(colors.fgRed + '❌ Erro ao iniciar o bot:', err.message + colors.reset);
-    botProcess = null;
-    setTimeout(showMenu, 1500);
-  });
-}
+    const embed = new EmbedBuilder()
+      .setDescription(textoEmbed)
+      .setColor(corHex)
+      .setTimestamp();
 
-// Função para desligar o processo do bot
-function desligarBot() {
-  if (!botProcess) {
-    console.log(colors.fgYellow + '⚠️ Bot não está rodando!' + colors.reset);
-    setTimeout(showMenu, 1500);
-    return;
+    await canal.send({ embeds: [embed] });
+    console.log('✅ Embed enviado com sucesso!');
+  } catch (error) {
+    console.error('❌ Erro ao enviar embed:', error.message);
   }
-  botProcess.kill();
-  console.log(colors.fgGreen + '✅ Bot desligado!' + colors.reset);
-  botProcess = null;
-  setTimeout(showMenu, 1500);
 }
 
-// Função para enviar mensagem simples para um canal específico
-function enviarMensagem() {
-  rl.question(colors.fgCyan + '[Mensagem] ➤ ID do canal: ' + colors.reset, (channelId) => {
-    rl.question(colors.fgCyan + '[Mensagem] ➤ Conteúdo da mensagem: ' + colors.reset, (msg) => {
-      // Precisamos garantir o botProcess está rodando e expor um modo para enviar mensagem
-      if (!botProcess) {
-        console.log(colors.fgRed + '❌ Bot não está rodando. Ligue o bot antes.' + colors.reset);
-        setTimeout(showMenu, 1500);
-        return;
-      }
-      // Uma forma simples: criar um arquivo JSON que o bot lê periodicamente para enviar a mensagem,
-      // ou implementar um IPC, mas para simplicidade aqui, só informar que comando não implementado.
-      console.log(colors.fgYellow + '⚠️ Função de envio de mensagem não implementada nesta versão.' + colors.reset);
-      setTimeout(showMenu, 1500);
-    });
-  });
+// Menu principal
+async function menu() {
+  config = loadConfig();
+
+  while (true) {
+    console.clear();
+    console.log('/ __| \'_ \\ / _ \\| | | | |/ / _ \\ / _` |/ _ \\ \\ / /');
+    console.log('\\__ \\ | | | (_) | |_| |   < (_) | (_| |  __/\\ V /');
+    console.log('|___/_| |_|\\___/ \\__,_|_|\\_\\___(_)__,_|\\___| \\_/');
+    console.log('');
+    console.log('- Version: 1.2.0 | Discord Multi-Bot Panel');
+    console.log('- Credit: YourName.dev');
+    console.log(`- Status: ${config.status.toUpperCase()}`);
+    console.log('');
+    console.log('╭──────────── discord.gg/seuservidor - Setup Menu ─────────────╮');
+    console.log('│ ╭────────┬──────────────────────────────────────────────────╮ │');
+    console.log('│ │   No   │ Setup Option                                     │ │');
+    console.log('│ ├────────┼──────────────────────────────────────────────────┤ │');
+    console.log('│ │ [ 1 ]  Criar todos os arquivos do bot            │ │');
+    console.log('│ │ [ 2 ]  Apenas criar config.json                  │ │');
+    console.log('│ │ [ 3 ]  Sair do painel                            │ │');
+    console.log('│ │ [ 4 ]  Alterar token do bot                      │ │');
+    console.log('│ │ [ 5 ]  Ligar o bot (start)                       │ │');
+    console.log('│ │ [ 6 ]  Desligar o bot (stop)                     │ │');
+    console.log('│ │ [ 7 ]  Enviar mensagem para canal específico     │ │');
+    console.log('│ │ [ 8 ]  Enviar mensagem com embed personalizado   │ │');
+    console.log('│ ╰────────┴──────────────────────────────────────────────────╯ │');
+    console.log('╰──────────────────────────────────────────────────────────────╯');
+    const opcao = readline.question('[SetupBot] ➤ Digite o número da opção desejada: ');
+
+    switch (opcao.trim()) {
+      case '1':
+        if (!fs.existsSync(CONFIG_FILE)) {
+          saveConfig({ token: '', status: 'stopped' });
+          console.log('✅ Arquivo config.json criado!');
+        } else {
+          console.log('Arquivo config.json já existe.');
+        }
+        break;
+      case '2':
+        saveConfig({ token: '', status: 'stopped' });
+        console.log('✅ Arquivo config.json (padrão) criado!');
+        break;
+      case '3':
+        console.log('Saindo do painel...');
+        process.exit(0);
+      case '4':
+        alterarToken();
+        break;
+      case '5':
+        await ligarBot();
+        break;
+      case '6':
+        await desligarBot();
+        break;
+      case '7':
+        await enviarMensagem();
+        break;
+      case '8':
+        await enviarEmbed();
+        break;
+      default:
+        console.log('Opção inválida, tente novamente.');
+        break;
+    }
+
+    console.log('\nPressione ENTER para voltar ao menu...');
+    readline.question('');
+  }
 }
 
-// Função para enviar mensagem embed personalizada - similar a enviarMensagem
-function enviarMensagemEmbed() {
-  console.log(colors.fgYellow + '⚠️ Função de envio de embed não implementada nesta versão.' + colors.reset);
-  setTimeout(showMenu, 1500);
-}
-
-// Inicializa a aplicação
-welcomeMessage();
+menu();
