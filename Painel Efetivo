@@ -63,6 +63,7 @@ function showMenu() {
 │ │ [ 7 ]  │ Enviar mensagem para canal específico            │ │
 │ │ [ 8 ]  │ Mostrar chave atual (whitelist)                  │ │
 │ │ [ 9 ]  │ Enviar embed para canal específico               │ │
+│ | [ 10 ]  │ Setup Ticket (estilo Ticket Tool)                │ │       
 │ ╰────────┴──────────────────────────────────────────────────╯ │
 ╰──────────────────────────────────────────────────────────────╯
 `);
@@ -78,6 +79,7 @@ function showMenu() {
       case '7': enviarMensagem(); break;
       case '8': mostrarChave(); break;
       case '9': enviarEmbed(); break;
+      case '10': setupTicketTool(); break;
       default:
         console.log('⚠️ Opção inválida. Tente novamente.');
         setTimeout(showMenu, 1500);
@@ -250,6 +252,68 @@ function enviarEmbed() {
           });
 
           client.login(config.token);
+        });
+      });
+    });
+  });
+}
+
+function setupTicketTool() {
+  rl.question('[Canal] ➤ Cole o link do canal para o painel de tickets: ', (link) => {
+    rl.question('[Título] ➤ Título do painel: ', (titulo) => {
+      rl.question('[Descrição] ➤ Mensagem do painel: ', (descricao) => {
+        rl.question('[Emoji] ➤ Emoji do botão (ex: 🎫): ', (emoji) => {
+          rl.question('[Botão] ➤ Nome do botão (ex: Abrir Ticket): ', (label) => {
+            rl.question('[Nome do Ticket] ➤ Nome base (ex: ticket): ', (ticketName) => {
+              const partes = link.split('/');
+              const channelId = partes[partes.length - 1];
+              const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
+              const {
+                Client,
+                GatewayIntentBits,
+                ActionRowBuilder,
+                ButtonBuilder,
+                ButtonStyle,
+                EmbedBuilder,
+              } = require('discord.js');
+
+              const client = new Client({
+                intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+              });
+
+              client.once('ready', async () => {
+                try {
+                  const canal = await client.channels.fetch(channelId);
+                  if (!canal) throw new Error('Canal não encontrado.');
+
+                  const embed = new EmbedBuilder()
+                    .setTitle(titulo)
+                    .setDescription(descricao)
+                    .setColor(0x2b2d31)
+                    .setFooter({ text: 'Sistema de Suporte' })
+                    .setTimestamp();
+
+                  const botao = new ButtonBuilder()
+                    .setCustomId(`ticket_create_${ticketName}`)
+                    .setLabel(label)
+                    .setEmoji(emoji)
+                    .setStyle(ButtonStyle.Secondary);
+
+                  const row = new ActionRowBuilder().addComponents(botao);
+
+                  await canal.send({ embeds: [embed], components: [row] });
+                  console.log('🎟️ Painel de ticket enviado com sucesso!');
+                } catch (e) {
+                  console.log('❌ Erro ao enviar painel:', e.message);
+                }
+
+                client.destroy();
+                setTimeout(showMenu, 1500);
+              });
+
+              client.login(config.token);
+            });
+          });
         });
       });
     });
