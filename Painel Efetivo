@@ -9,46 +9,125 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
+// Cores ANSI para terminal
+const colors = {
+  reset: '\x1b[0m',
+  bright: '\x1b[1m',
+  dim: '\x1b[2m',
+  underscore: '\x1b[4m',
+  blink: '\x1b[5m',
+  reverse: '\x1b[7m',
+  hidden: '\x1b[8m',
+
+  fgBlack: '\x1b[30m',
+  fgRed: '\x1b[31m',
+  fgGreen: '\x1b[32m',
+  fgYellow: '\x1b[33m',
+  fgBlue: '\x1b[34m',
+  fgMagenta: '\x1b[35m',
+  fgCyan: '\x1b[36m',
+  fgWhite: '\x1b[37m',
+
+  bgBlack: '\x1b[40m',
+  bgRed: '\x1b[41m',
+  bgGreen: '\x1b[42m',
+  bgYellow: '\x1b[43m',
+  bgBlue: '\x1b[44m',
+  bgMagenta: '\x1b[45m',
+  bgCyan: '\x1b[46m',
+  bgWhite: '\x1b[47m',
+};
+
+function welcomeMessage() {
+  console.clear();
+  console.log(colors.fgCyan + colors.bright);
+  console.log('═══════════════════════════════════════════════════════════');
+  console.log('   🔥 Bem-vindo ao Discord Multi-Bot Panel v1.2.0 🔥      ');
+  console.log('═══════════════════════════════════════════════════════════' + colors.reset);
+  console.log('Use este painel para criar, configurar e controlar seu bot.\n');
+  setTimeout(showMenu, 2000);
+}
+
 function showMenu() {
   console.clear();
-  console.log(`
+  console.log(colors.fgMagenta + colors.bright + `
 / __| '_ \\ / _ \\| | | | |/ / _ \\ / _\` |/ _ \\ \\ / /
 \\__ \\ | | | (_) | |_| |   < (_) | (_| |  __/\\ V /
 |___/_| |_|\\___/ \\__,_|_|\\_\\___(_)__,_|\\___| \\_/
 
-- Version: 1.2.0 | Discord Multi-Bot Panel
-- Credit: YourName.dev
-- Status: Multi-funcional
+` + colors.reset);
 
-╭──────────── discord.gg/seuservidor - Setup Menu ─────────────╮
-│ ╭────────┬──────────────────────────────────────────────────╮ │
-│ │   No   │ Setup Option                                     │ │
-│ ├────────┼──────────────────────────────────────────────────┤ │
-│ │ [ 1 ]  │ Criar todos os arquivos do bot                   │ │
-│ │ [ 2 ]  │ Apenas criar config.json                         │ │
-│ │ [ 3 ]  │ Sair do painel                                   │ │
-│ │ [ 4 ]  │ Alterar token do bot                             │ │
-│ │ [ 5 ]  │ Ligar o bot (start)                              │ │
-│ │ [ 6 ]  │ Desligar o bot (stop)                            │ │
-│ │ [ 7 ]  │ Enviar mensagem para canal específico            │ │
-│ ╰────────┴──────────────────────────────────────────────────╯ │
-╰──────────────────────────────────────────────────────────────╯
-`);
+  console.log(
+    colors.fgYellow + colors.bright +
+    '- Version: 1.2.0 | Discord Multi-Bot Panel\n' +
+    '- Credit: YourName.dev\n' +
+    '- Status: Multi-funcional\n\n' +
+    colors.reset
+  );
 
-  rl.question('[SetupBot] ➤ Digite o número da opção desejada: ', (answer) => {
-    switch (answer.trim()) {
-      case '1': criarArquivos(true); break;
-      case '2': criarArquivos(false); break;
-      case '3': console.log('❌ Saindo...'); rl.close(); break;
-      case '4': alterarToken(); break;
-      case '5': ligarBot(); break;
-      case '6': desligarBot(); break;
-      case '7': enviarMensagem(); break;
-      default:
-        console.log('⚠️ Opção inválida. Tente novamente.');
-        setTimeout(showMenu, 1500);
-    }
-  });
+  console.log(colors.fgCyan +
+    '╭──────────── ' + colors.fgGreen + 'discord.gg/seuservidor' + colors.fgCyan + ' - Setup Menu ─────────────╮' + colors.reset
+  );
+  console.log(colors.fgCyan +
+    '│ ╭────────┬──────────────────────────────────────────────────╮ │' + colors.reset
+  );
+  console.log(colors.fgBlue +
+    '│ │   No   │ Setup Option                                     │ │' + colors.reset
+  );
+  console.log(colors.fgBlue +
+    '│ ├────────┼──────────────────────────────────────────────────┤ │' + colors.reset
+  );
+  console.log(colors.fgWhite +
+    '│ │ [ 1 ]  │ Criar todos os arquivos do bot                   │ │' + colors.reset
+  );
+  console.log(colors.fgWhite +
+    '│ │ [ 2 ]  │ Apenas criar config.json                         │ │' + colors.reset
+  );
+  console.log(colors.fgWhite +
+    '│ │ [ 3 ]  │ Sair do painel                                   │ │' + colors.reset
+  );
+  console.log(colors.fgWhite +
+    '│ │ [ 4 ]  │ Alterar token do bot                             │ │' + colors.reset
+  );
+  console.log(colors.fgWhite +
+    '│ │ [ 5 ]  │ Ligar o bot (start)                              │ │' + colors.reset
+  );
+  console.log(colors.fgWhite +
+    '│ │ [ 6 ]  │ Desligar o bot (stop)                            │ │' + colors.reset
+  );
+  console.log(colors.fgWhite +
+    '│ │ [ 7 ]  │ Enviar mensagem para canal específico            │ │' + colors.reset
+  );
+  console.log(colors.fgWhite +
+    '│ │ [ 8 ]  │ Enviar mensagem com embed personalizado          │ │' + colors.reset
+  );
+  console.log(colors.fgCyan +
+    '│ ╰────────┴──────────────────────────────────────────────────╯ │' + colors.reset
+  );
+  console.log(colors.fgCyan +
+    '╰──────────────────────────────────────────────────────────────╯\n' + colors.reset
+  );
+
+  rl.question(colors.fgGreen + '[SetupBot] ➤ Digite o número da opção desejada: ' + colors.reset, handleInput);
+}
+
+function handleInput(answer) {
+  switch (answer.trim()) {
+    case '1': criarArquivos(true); break;
+    case '2': criarArquivos(false); break;
+    case '3':
+      console.log(colors.fgRed + '❌ Saindo...' + colors.reset);
+      rl.close();
+      break;
+    case '4': alterarToken(); break;
+    case '5': ligarBot(); break;
+    case '6': desligarBot(); break;
+    case '7': enviarMensagem(); break;
+    case '8': enviarMensagemEmbed(); break;
+    default:
+      console.log(colors.fgRed + '⚠️ Opção inválida. Tente novamente.' + colors.reset);
+      setTimeout(showMenu, 1500);
+  }
 }
 
 function criarArquivos(tudo) {
@@ -84,7 +163,7 @@ client.login(config.token);`;
     const dir = path.dirname(completo);
     if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
     fs.writeFileSync(completo, conteudo.trim());
-    console.log(`✅ Arquivo criado: ${caminho}`);
+    console.log(colors.fgGreen + `✅ Arquivo criado: ${caminho}` + colors.reset);
   }
 
   if (tudo) {
@@ -98,30 +177,31 @@ client.login(config.token);`;
         dependencies: { "discord.js": "^14.0.0" }
       };
       fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2));
-      console.log('📦 package.json criado!');
+      console.log(colors.fgGreen + '📦 package.json criado!' + colors.reset);
     }
   }
 
-  console.log('\n🎉 Setup finalizado! Execute:');
+  console.log(colors.fgYellow + '\n🎉 Setup finalizado! Execute:' + colors.reset);
   console.log('   1️⃣ npm install');
   console.log('   2️⃣ node painel.js e escolha [5] para iniciar o bot');
-  setTimeout(showMenu, 3000);
+  setTimeout(showMenu, 2500);
 }
 
 function alterarToken() {
   const configPath = path.join(process.cwd(), 'config.json');
   if (!fs.existsSync(configPath)) {
-    console.log('⚠️ config.json não encontrado!');
-    return setTimeout(showMenu, 1500);
+    console.log(colors.fgRed + '⚠️ config.json não encontrado!' + colors.reset);
+    setTimeout(showMenu, 1500);
+    return;
   }
-  rl.question('[TokenBot] ➤ Digite o novo token: ', (novoToken) => {
+  rl.question(colors.fgCyan + '[TokenBot] ➤ Digite o novo token: ' + colors.reset, (novoToken) => {
     try {
       const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
       config.token = novoToken;
       fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-      console.log('✅ Token atualizado!');
+      console.log(colors.fgGreen + '✅ Token atualizado!' + colors.reset);
     } catch (err) {
-      console.log('❌ Erro ao alterar token:', err.message);
+      console.log(colors.fgRed + '❌ Erro ao alterar token:', err.message + colors.reset);
     }
     setTimeout(showMenu, 1500);
   });
@@ -129,51 +209,96 @@ function alterarToken() {
 
 function ligarBot() {
   if (botProcess) {
-    console.log('⚠️ Bot já está em execução.');
-    return setTimeout(showMenu, 1500);
+    console.log(colors.fgYellow + '⚠️ Bot já está rodando!' + colors.reset);
+    setTimeout(showMenu, 1500);
+    return;
+  }
+  if (!fs.existsSync(path.join(process.cwd(), 'index.js'))) {
+    console.log(colors.fgRed + '❌ index.js não encontrado. Crie os arquivos primeiro.' + colors.reset);
+    setTimeout(showMenu, 1500);
+    return;
   }
   botProcess = spawn('node', ['index.js'], { stdio: 'inherit' });
-  console.log('✅ Bot iniciado.');
-  setTimeout(showMenu, 1500);
+  botProcess.on('close', (code) => {
+    console.log(colors.fgYellow + `⚠️ Bot finalizado com código ${code}` + colors.reset);
+    botProcess = null;
+    setTimeout(showMenu, 1500);
+  });
 }
 
 function desligarBot() {
-  if (botProcess) {
-    botProcess.kill();
-    botProcess = null;
-    console.log('🛑 Bot desligado.');
-  } else {
-    console.log('⚠️ Bot não está em execução.');
+  if (!botProcess) {
+    console.log(colors.fgYellow + '⚠️ Bot não está rodando!' + colors.reset);
+    setTimeout(showMenu, 1500);
+    return;
   }
+  botProcess.kill();
+  console.log(colors.fgGreen + '✅ Bot desligado!' + colors.reset);
   setTimeout(showMenu, 1500);
 }
 
 function enviarMensagem() {
-  rl.question('[Canal] ➤ Cole o link do canal (ex: https://discord.com/channels/123/456): ', (link) => {
-    rl.question('[Mensagem] ➤ Digite a mensagem: ', (texto) => {
-      const partes = link.split('/');
-      const channelId = partes[partes.length - 1];
-      const config = JSON.parse(fs.readFileSync('./config.json', 'utf8'));
-      const { Client, GatewayIntentBits } = require('discord.js');
-      const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
-
-      client.once('ready', async () => {
-        try {
-          const canal = await client.channels.fetch(channelId);
-          if (!canal) throw new Error('Canal não encontrado.');
-          await canal.send(texto);
-          console.log('✅ Mensagem enviada com sucesso!');
-        } catch (e) {
-          console.log('❌ Erro ao enviar mensagem:', e.message);
-        }
-        client.destroy();
+  rl.question(colors.fgCyan + 'Digite o ID do canal para enviar a mensagem: ' + colors.reset, (channelId) => {
+    rl.question(colors.fgCyan + 'Digite a mensagem que deseja enviar: ' + colors.reset, (msg) => {
+      try {
+        const config = JSON.parse(fs.readFileSync('./config.json'));
+        const { Client, GatewayIntentBits } = require('discord.js');
+        const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
+        client.once('ready', async () => {
+          const channel = await client.channels.fetch(channelId);
+          if (!channel) {
+            console.log(colors.fgRed + '❌ Canal não encontrado!' + colors.reset);
+            client.destroy();
+            setTimeout(showMenu, 1500);
+            return;
+          }
+          await channel.send(msg);
+          console.log(colors.fgGreen + '✅ Mensagem enviada!' + colors.reset);
+          client.destroy();
+          setTimeout(showMenu, 1500);
+        });
+        client.login(config.token);
+      } catch (err) {
+        console.log(colors.fgRed + '❌ Erro: ' + err.message + colors.reset);
         setTimeout(showMenu, 1500);
-      });
-
-      client.login(config.token);
+      }
     });
   });
 }
 
-// Inicializa mostrando o menu
-showMenu();
+function enviarMensagemEmbed() {
+  rl.question(colors.fgCyan + 'Digite o ID do canal para enviar a embed: ' + colors.reset, (channelId) => {
+    rl.question(colors.fgCyan + 'Digite a cor da embed (hexadecimal, ex: #FF0000): ' + colors.reset, (color) => {
+      rl.question(colors.fgCyan + 'Digite o texto da embed: ' + colors.reset, (text) => {
+        try {
+          const config = JSON.parse(fs.readFileSync('./config.json'));
+          const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
+          const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
+          client.once('ready', async () => {
+            const channel = await client.channels.fetch(channelId);
+            if (!channel) {
+              console.log(colors.fgRed + '❌ Canal não encontrado!' + colors.reset);
+              client.destroy();
+              setTimeout(showMenu, 1500);
+              return;
+            }
+            const embed = new EmbedBuilder()
+              .setDescription(text)
+              .setColor(color);
+            await channel.send({ embeds: [embed] });
+            console.log(colors.fgGreen + '✅ Embed enviada!' + colors.reset);
+            client.destroy();
+            setTimeout(showMenu, 1500);
+          });
+          client.login(config.token);
+        } catch (err) {
+          console.log(colors.fgRed + '❌ Erro: ' + err.message + colors.reset);
+          setTimeout(showMenu, 1500);
+        }
+      });
+    });
+  });
+}
+
+welcomeMessage();
+
