@@ -275,10 +275,21 @@ function setupTicketTool() {
                 ButtonBuilder,
                 ButtonStyle,
                 EmbedBuilder,
+                PermissionsBitField,
               } = require('discord.js');
 
               const client = new Client({
-                intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent],
+                intents: [
+                  GatewayIntentBits.Guilds,
+                  GatewayIntentBits.GuildMessages,
+                  GatewayIntentBits.MessageContent,
+                  GatewayIntentBits.GuildMembers,
+                  GatewayIntentBits.MessageContent,
+                  GatewayIntentBits.GuildMessageReactions,
+                  GatewayIntentBits.DirectMessages,
+                  GatewayIntentBits.GuildMessageTyping,
+                  GatewayIntentBits.GuildPresences
+                ],
               });
 
               client.once('ready', async () => {
@@ -302,12 +313,102 @@ function setupTicketTool() {
                   const row = new ActionRowBuilder().addComponents(botao);
 
                   await canal.send({ embeds: [embed], components: [row] });
+
+                  client.on('interactionCreate', async (interaction) => {
+                    if (!interaction.isButton()) return;
+                    if (!interaction.customId.startsWith('ticket_create_')) return;
+
+                    const user = interaction.user;
+                    const guild = interaction.guild;
+
+                    const channel = await guild.channels.create({
+                      name: `ticket-${user.username}`,
+                      type: 0, // GuildText
+                      permissionOverwrites: [
+                        {
+                          id: guild.roles.everyone,
+                          deny: [PermissionsBitField.Flags.ViewChannel],
+                        },
+                        {
+                          id: user.id,
+                          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages],
+                        },
+                        {
+                          id: '1376087634031411325',
+                          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages],
+                        },
+                        {
+                          id: '1376087634014638151',
+                          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages],
+                        },
+                      ],
+                    });
+
+                    const embedTicket = new EmbedBuilder()
+                      .setTitle('🎟️ Suporte Aberto')
+                      .setDescription(`Olá ${user}, um membro da equipe irá te ajudar em breve.\nClique no botão abaixo para **fechar** este ticket quando não precisar mais de suporte.`)
+                      .setColor(0x2b2d31)
+                      .setTimestamp();
+
+                    const closeButton = new ButtonBuilder()
+                      .setCustomId('ticket_close')
+                      .setLabel('Fechar Ticket')
+                      .setStyle(ButtonStyle.Danger);
+
+                    const rowClose = new ActionRowBuilder().addComponents(closeButton);
+
+                    await channel.send({
+                      content: `<@${user.id}>`,
+                      embeds: [embedTicket],
+                      components: [rowClose],
+                    });
+
+                    await interaction.reply({ content: `🎫 Ticket criado: ${channel}`, ephemeral: true });
+                  });
+
+                  client.on('interactionCreate', async (interaction) => {
+                    if (!interaction.isButton()) return;
+                    if (interaction.customId !== 'ticket_close') return;
+
+                    await interaction.reply({
+                      content: 'Tem certeza que deseja fechar o ticket?',
+                      components: [
+                        new ActionRowBuilder().addComponents(
+                          new ButtonBuilder()
+                            .setCustomId('confirm_close')
+                            .setLabel('✅ Confirmar')
+                            .setStyle(ButtonStyle.Danger),
+                          new ButtonBuilder()
+                            .setCustomId('cancel_close')
+                            .setLabel('❌ Cancelar')
+                            .setStyle(ButtonStyle.Secondary)
+                        )
+                      ],
+                      ephemeral: true,
+                    });
+                  });
+
+                  client.on('interactionCreate', async (interaction) => {
+                    if (!interaction.isButton()) return;
+
+                    if (interaction.customId === 'confirm_close') {
+                      await interaction.reply({ content: '✅ Fechando ticket em 5 segundos...', ephemeral: true });
+                      setTimeout(() => {
+                        interaction.channel.delete().catch(console.error);
+                      }, 5000);
+                    }
+
+                    if (interaction.customId === 'cancel_close') {
+                      await interaction.reply({ content: '❌ Cancelamento confirmado.', ephemeral: true });
+                    }
+                  });
+
                   console.log('🎟️ Painel de ticket enviado com sucesso!');
                 } catch (e) {
                   console.log('❌ Erro ao enviar painel:', e.message);
                 }
 
-                client.destroy();
+                // client.destroy(); // Mantém o bot online para capturar interações
                 setTimeout(showMenu, 1500);
               });
 
