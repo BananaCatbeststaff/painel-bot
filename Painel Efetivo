@@ -275,7 +275,9 @@ function setupTicketTool() {
                 ButtonBuilder,
                 ButtonStyle,
                 EmbedBuilder,
+                ChannelType,
                 PermissionsBitField,
+                Events,
               } = require('discord.js');
 
               const client = new Client({
@@ -284,13 +286,15 @@ function setupTicketTool() {
                   GatewayIntentBits.GuildMessages,
                   GatewayIntentBits.MessageContent,
                   GatewayIntentBits.GuildMembers,
-                  GatewayIntentBits.MessageContent,
-                  GatewayIntentBits.GuildMessageReactions,
-                  GatewayIntentBits.DirectMessages,
-                  GatewayIntentBits.GuildMessageTyping,
-                  GatewayIntentBits.GuildPresences
                 ],
               });
+
+              const allowedRoleIds = [
+                '1376087634031411325',
+                '1376087634014638151',
+              ];
+
+              const upersRoleId = '1376087634014638151'; // ID atualizado do cargo @Upers
 
               client.once('ready', async () => {
                 try {
@@ -304,115 +308,87 @@ function setupTicketTool() {
                     .setFooter({ text: 'Sistema de Suporte' })
                     .setTimestamp();
 
-                  const botao = new ButtonBuilder()
+                  const botaoAbrir = new ButtonBuilder()
                     .setCustomId(`ticket_create_${ticketName}`)
                     .setLabel(label)
                     .setEmoji(emoji)
                     .setStyle(ButtonStyle.Secondary);
 
-                  const row = new ActionRowBuilder().addComponents(botao);
+                  const row = new ActionRowBuilder().addComponents(botaoAbrir);
 
                   await canal.send({ embeds: [embed], components: [row] });
+                  console.log('🎟️ Painel de ticket enviado com sucesso!');
+                } catch (e) {
+                  console.log('❌ Erro ao enviar painel:', e.message);
+                }
 
-                  client.on('interactionCreate', async (interaction) => {
-                    if (!interaction.isButton()) return;
-                    if (!interaction.customId.startsWith('ticket_create_')) return;
+                client.on(Events.InteractionCreate, async (interaction) => {
+                  if (!interaction.isButton()) return;
 
-                    const user = interaction.user;
-                    const guild = interaction.guild;
+                  const guild = interaction.guild;
+                  const member = interaction.member;
 
-                    const channel = await guild.channels.create({
-                      name: `ticket-${user.username}`,
-                      type: 0, // GuildText
+                  if (interaction.customId === `ticket_create_${ticketName}`) {
+                    const nomeCanal = `ticket-${member.user.username.toLowerCase()}`;
+
+                    const canalTicket = await guild.channels.create({
+                      name: nomeCanal,
+                      type: ChannelType.GuildText,
                       permissionOverwrites: [
                         {
                           id: guild.roles.everyone,
                           deny: [PermissionsBitField.Flags.ViewChannel],
                         },
                         {
-                          id: user.id,
+                          id: member.user.id,
                           allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages],
                         },
-                        {
-                          id: '1376087634031411325',
+                        ...allowedRoleIds.map(roleId => ({
+                          id: roleId,
                           allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages],
-                        },
-                        {
-                          id: '1376087634014638151',
-                          allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages],
-                        },
+                        })),
                       ],
                     });
 
-                    const embedTicket = new EmbedBuilder()
-                      .setTitle('🎟️ Suporte Aberto')
-                      .setDescription(`Olá ${user}, um membro da equipe irá te ajudar em breve.\nClique no botão abaixo para **fechar** este ticket quando não precisar mais de suporte.`)
+                    const embedAbertura = new EmbedBuilder()
+                      .setTitle('📩 Ticket Criado')
+                      .setDescription(`Olá ${member}, aguarde enquanto um atendente responde.`)
                       .setColor(0x2b2d31)
                       .setTimestamp();
 
-                    const closeButton = new ButtonBuilder()
+                    const botaoFechar = new ButtonBuilder()
                       .setCustomId('ticket_close')
                       .setLabel('Fechar Ticket')
+                      .setEmoji('🔒')
                       .setStyle(ButtonStyle.Danger);
 
-                    const rowClose = new ActionRowBuilder().addComponents(closeButton);
+                    const rowFechar = new ActionRowBuilder().addComponents(botaoFechar);
 
-                    await channel.send({
-                      content: `<@${user.id}>`,
-                      embeds: [embedTicket],
-                      components: [rowClose],
+                    await canalTicket.send({
+                      content: `<@&${upersRoleId}>`,
+                      embeds: [embedAbertura],
+                      components: [rowFechar],
                     });
-
-                    await interaction.reply({ content: `🎫 Ticket criado: ${channel}`, ephemeral: true });
-                  });
-
-                  client.on('interactionCreate', async (interaction) => {
-                    if (!interaction.isButton()) return;
-                    if (interaction.customId !== 'ticket_close') return;
 
                     await interaction.reply({
-                      content: 'Tem certeza que deseja fechar o ticket?',
-                      components: [
-                        new ActionRowBuilder().addComponents(
-                          new ButtonBuilder()
-                            .setCustomId('confirm_close')
-                            .setLabel('✅ Confirmar')
-                            .setStyle(ButtonStyle.Danger),
-                          new ButtonBuilder()
-                            .setCustomId('cancel_close')
-                            .setLabel('❌ Cancelar')
-                            .setStyle(ButtonStyle.Secondary)
-                        )
-                      ],
+                      content: `✅ Ticket criado: ${canalTicket}`,
                       ephemeral: true,
                     });
-                  });
+                  }
 
-                  client.on('interactionCreate', async (interaction) => {
-                    if (!interaction.isButton()) return;
-
-                    if (interaction.customId === 'confirm_close') {
-                      await interaction.reply({ content: '✅ Fechando ticket em 5 segundos...', ephemeral: true });
-                      setTimeout(() => {
-                        interaction.channel.delete().catch(console.error);
-                      }, 5000);
+                  if (interaction.customId === 'ticket_close') {
+                    const canal = interaction.channel;
+                    if (canal.name.startsWith('ticket-')) {
+                      await interaction.reply({ content: '🔒 Fechando o ticket...', ephemeral: true });
+                      setTimeout(() => canal.delete().catch(() => {}), 2000);
+                    } else {
+                      await interaction.reply({ content: '❌ Este canal não parece ser um ticket.', ephemeral: true });
                     }
+                  }
+                });
 
-                    if (interaction.customId === 'cancel_close') {
-                      await interaction.reply({ content: '❌ Cancelamento confirmado.', ephemeral: true });
-                    }
-                  });
-
-                  console.log('🎟️ Painel de ticket enviado com sucesso!');
-                } catch (e) {
-                  console.log('❌ Erro ao enviar painel:', e.message);
-                }
-
-                // client.destroy(); // Mantém o bot online para capturar interações
-                setTimeout(showMenu, 1500);
+                client.login(config.token);
               });
-
-              client.login(config.token);
             });
           });
         });
